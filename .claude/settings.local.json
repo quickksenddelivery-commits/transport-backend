@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module)",
+      "Bash(node -p \"const app=require\\('./src/app.js'\\); typeof app\")",
+      "Bash(grep -v \"^$\")"
+    ]
+  }
+}
