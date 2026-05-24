@@ -26,13 +26,10 @@ module.exports = {
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '15m',
     JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
-    // Email (SMTP)
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: parseInt(process.env.SMTP_PORT, 10) || 587,
-    SMTP_USER: process.env.SMTP_USER,
-    SMTP_PASS: process.env.SMTP_PASS,
-    EMAIL_FROM: process.env.EMAIL_FROM || 'noreply@quicksenddelivery.com',
-    CONTACT_EMAIL: process.env.CONTACT_EMAIL,
+    // Email (Resend)
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+    CONTACT_EMAIL: process.env.CONTACT_EMAIL || 'quickksenddelivery@gmail.com',
 
     // Admin
     ADMIN_SECRET: process.env.ADMIN_SECRET,

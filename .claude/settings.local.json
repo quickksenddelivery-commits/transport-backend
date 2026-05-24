@@ -4,7 +4,9 @@
       "Bash(node -e ' *)",
       "Bash(node --input-type=module)",
       "Bash(node -p \"const app=require\\('./src/app.js'\\); typeof app\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(RESEND_API_KEY=re_NH69cLJy_Q7MFN68JBwYUxppMBY7Foytt node test-email.js)",
+      "Bash(node scripts/seed-admin.js)"
     ]
   }
 }

@@ -1,37 +1,31 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const logger = require('../utils/logger');
 const { env } = require('../config/env');
 
-let transporter;
-
-const getTransporter = () => {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_PORT === 465,
-      auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-    });
-  }
-  return transporter;
-};
+const resend = new Resend(env.RESEND_API_KEY);
 
 const sendEmail = async ({ to, subject, html, text }) => {
   if (process.env.NODE_ENV !== 'production') {
     logger.info(`[DEV] Email skipped — would have sent to ${to}`, { subject });
-    return { messageId: 'dev-skipped' };
+    return { id: 'dev-skipped' };
   }
 
   try {
-    const info = await getTransporter().sendMail({
-      from: `"Quick Send Delivery" <${env.EMAIL_FROM}>`,
+    const { data, error } = await resend.emails.send({
+      from: `Quick Send Delivery <${env.EMAIL_FROM}>`,
       to,
       subject,
       html,
-      text: text || html.replace(/<[^>]+>/g, ''),
+      text: text || undefined,
     });
-    logger.info(`Email sent to ${to}: ${info.messageId}`);
-    return info;
+
+    if (error) {
+      logger.error(`Email send failed to ${to}: ${error.message}`);
+      throw new Error(error.message);
+    }
+
+    logger.info(`Email sent to ${to}: ${data.id}`);
+    return data;
   } catch (error) {
     logger.error(`Email send failed to ${to}: ${error.message}`);
     throw error;
@@ -45,8 +39,6 @@ const sendShipmentCreated = (user, shipment) =>
     html: `<h2>Hi ${user.firstName},</h2>
            <p>Your shipment has been created successfully.</p>
            <p><strong>Tracking Number:</strong> ${shipment.trackingNumber}</p>
-           <p><strong>From:</strong> ${shipment.origin.city}, ${shipment.origin.country}</p>
-           <p><strong>To:</strong> ${shipment.destination.city}, ${shipment.destination.country}</p>
            <p><strong>Status:</strong> ${shipment.status}</p>`,
   });
 
