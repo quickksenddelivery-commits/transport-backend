@@ -19,21 +19,9 @@ exports.subscribe = asyncHandler(async (req, res, next) => {
     await Subscriber.create({ email });
   }
 
-  // Send confirmation email (non-blocking)
-  emailService.sendEmail({
-    to: email,
-    subject: 'You\'re subscribed to Quick Send Delivery!',
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:auto">
-        <h2 style="color:#f59e0b">Quick Send Delivery</h2>
-        <p>Thanks for subscribing! You'll be the first to know about shipping updates, promotions, and news from us.</p>
-        <p style="color:#6b7280;font-size:13px">
-          If you didn't subscribe, you can safely ignore this email.
-        </p>
-        <p>— The Quick Send Team</p>
-      </div>
-    `,
-  }).catch((err) => logger.warn(`Subscription confirmation email failed: ${err.message}`));
+  // Send welcome email (non-blocking)
+  emailService.sendNewsletterWelcome(email)
+    .catch((err) => logger.warn(`Newsletter welcome email failed: ${err.message}`));
 
   logger.info(`New subscriber: ${email}`);
   res.status(201).json({ status: 'success', message: 'Successfully subscribed. Check your inbox!' });

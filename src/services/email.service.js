@@ -1,6 +1,7 @@
 const { Resend } = require('resend');
 const logger = require('../utils/logger');
 const { env } = require('../config/env');
+const templates = require('./email.templates');
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -81,6 +82,50 @@ const sendOTP = (user, otp) =>
            <p>Valid for 10 minutes. Do not share this code.</p>`,
   });
 
+// ─── Shipment Alert Emails ────────────────────────────────────────────────────
+
+const sendPickedUpAlert = (shipment) =>
+  sendEmail({
+    to: shipment.recipient.email,
+    subject: `📦 Package Picked Up — #${shipment.trackingNumber}`,
+    html: templates.pickedUp(shipment),
+  });
+
+const sendInTransitAlert = (shipment, eventLocation) =>
+  sendEmail({
+    to: shipment.recipient.email,
+    subject: `🚚 Your Package is In Transit — #${shipment.trackingNumber}`,
+    html: templates.inTransit(shipment, eventLocation),
+  });
+
+const sendOutForDeliveryAlert = (shipment) =>
+  sendEmail({
+    to: shipment.recipient.email,
+    subject: `🛵 Out for Delivery Today — #${shipment.trackingNumber}`,
+    html: templates.outForDelivery(shipment),
+  });
+
+const sendDeliveredAlert = (shipment) =>
+  sendEmail({
+    to: shipment.recipient.email,
+    subject: `✅ Package Delivered — #${shipment.trackingNumber}`,
+    html: templates.delivered(shipment),
+  });
+
+const sendDelayAlert = (shipment, event) =>
+  sendEmail({
+    to: shipment.recipient.email,
+    subject: `⚠️ Shipment Delay Notice — #${shipment.trackingNumber}`,
+    html: templates.delayAlert(shipment, event),
+  });
+
+const sendNewsletterWelcome = (email) =>
+  sendEmail({
+    to: email,
+    subject: '🎉 Welcome to Quick Send Delivery!',
+    html: templates.newsletterWelcome(email),
+  });
+
 module.exports = {
   sendEmail,
   sendShipmentCreated,
@@ -88,4 +133,10 @@ module.exports = {
   sendPasswordReset,
   sendEmailVerification,
   sendOTP,
+  sendPickedUpAlert,
+  sendInTransitAlert,
+  sendOutForDeliveryAlert,
+  sendDeliveredAlert,
+  sendDelayAlert,
+  sendNewsletterWelcome,
 };

@@ -1,6 +1,15 @@
 const Shipment = require('../models/Shipment');
 const { asyncHandler, AppError } = require('../middleware/errorHandler.middleware');
 const { generateTrackingNumber, parsePagination, paginationMeta } = require('../utils/helpers');
+const emailService = require('../services/email.service');
+const logger = require('../utils/logger');
+
+const STATUS_EMAIL_MAP = {
+  picked_up: (s) => emailService.sendPickedUpAlert(s),
+  in_transit: (s) => emailService.sendInTransitAlert(s),
+  out_for_delivery: (s) => emailService.sendOutForDeliveryAlert(s),
+  delivered: (s) => emailService.sendDeliveredAlert(s),
+};
 
 // ─── Stats ──────────────────────────────────────────────────────────────────
 
@@ -96,6 +105,15 @@ exports.updateShipment = asyncHandler(async (req, res, next) => {
   );
 
   if (!shipment) return next(new AppError('Shipment not found', 404));
+
+  // Fire alert email if recipient has an email and status changed to a notifiable state
+  const newStatus = req.body.status;
+  if (newStatus && STATUS_EMAIL_MAP[newStatus] && shipment.recipient?.email) {
+    STATUS_EMAIL_MAP[newStatus](shipment).catch((err) =>
+      logger.warn(`Status alert email failed [${newStatus}]: ${err.message}`)
+    );
+  }
+
   res.json({ status: 'success', data: { shipment } });
 });
 
@@ -126,5 +144,20 @@ exports.addEvent = asyncHandler(async (req, res, next) => {
 
   if (!shipment) return next(new AppError('Shipment not found', 404));
   const newEvent = shipment.events[shipment.events.length - 1];
+
+  // Delay alert — send when an exception event is added
+  if (type === 'exception' && shipment.recipient?.email) {
+    emailService.sendDelayAlert(shipment, newEvent).catch((err) =>
+      logger.warn(`Delay alert email failed: ${err.message}`)
+    );
+  }
+
+  // In-transit update — send when a transit event is added
+  if (type === 'transit' && shipment.recipient?.email) {
+    emailService.sendInTransitAlert(shipment, location).catch((err) =>
+      logger.warn(`In-transit alert email failed: ${err.message}`)
+    );
+  }
+
   res.status(201).json({ status: 'success', data: { event: newEvent, shipment } });
 });

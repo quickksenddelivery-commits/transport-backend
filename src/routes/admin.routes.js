@@ -30,8 +30,20 @@ router.get('/shipments/:id', param('id').isMongoId(), validate, adminController.
 
 router.patch(
   '/shipments/:id',
-  param('id').isMongoId(),
-  body('status').optional().isIn(['pending','confirmed','picked_up','in_transit','out_for_delivery','delivered','failed','cancelled','returned']),
+  [
+    param('id').isMongoId(),
+    // status-only update (used by Update Status button)
+    body('status').optional().isIn(['pending','confirmed','picked_up','in_transit','out_for_delivery','delivered','failed','cancelled','returned']),
+    // full edit fields (used by Edit Shipment form)
+    body('sender.name').optional().trim().notEmpty().withMessage('Sender name cannot be empty'),
+    body('recipient.name').optional().trim().notEmpty().withMessage('Recipient name cannot be empty'),
+    body('service').optional().isIn(['standard', 'express', 'overnight', 'same_day']).withMessage('Invalid service type'),
+    body('weight').optional().isFloat({ min: 0.01 }).withMessage('Weight must be greater than 0'),
+    body('declaredValue').optional().isFloat({ min: 0 }),
+    body('dimensions.length').optional().isFloat({ min: 0 }),
+    body('dimensions.width').optional().isFloat({ min: 0 }),
+    body('dimensions.height').optional().isFloat({ min: 0 }),
+  ],
   validate,
   adminController.updateShipment
 );

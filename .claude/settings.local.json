@@ -6,7 +6,11 @@
       "Bash(node -p \"const app=require\\('./src/app.js'\\); typeof app\")",
       "Bash(grep -v \"^$\")",
       "Bash(RESEND_API_KEY=re_NH69cLJy_Q7MFN68JBwYUxppMBY7Foytt node test-email.js)",
-      "Bash(node scripts/seed-admin.js)"
+      "Bash(node scripts/seed-admin.js)",
+      "Bash(node -e \"require\\('./src/services/email.templates'\\); require\\('./src/services/email.service'\\); require\\('./src/controllers/admin.controller'\\); console.log\\('All modules loaded OK'\\)\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./src/services/email.templates'\\); require\\('./src/services/email.service'\\); require\\('./src/controllers/admin.controller'\\); console.log\\('All modules loaded OK'\\)\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./src/services/email.templates'\\); require\\('./src/services/email.service'\\); require\\('./src/controllers/subscribe.controller'\\); console.log\\('All modules loaded OK'\\)\")",
+      "Bash(node scripts/test-email.js)"
     ]
   }
 }
