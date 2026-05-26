@@ -21,8 +21,17 @@ const app = express();
 
 app.set('trust proxy', 1);
 app.use(helmet());
+const ALLOWED_ORIGINS = [
+  env.CLIENT_URL,
+  'https://accessiblexpress.com',
+  'https://www.accessiblexpress.com',
+].filter(Boolean);
+
 app.use(cors({
-  origin: env.CLIENT_URL,
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
