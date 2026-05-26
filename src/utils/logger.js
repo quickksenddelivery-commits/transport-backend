@@ -12,7 +12,7 @@ const devFormat = printf(({ level, message, timestamp: ts, stack, service, ...me
 const logger = createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), errors({ stack: true }), json()),
-  defaultMeta: { service: 'transport-backend' },
+  defaultMeta: { service: 'accessiblexpress' },
   transports: [
     new transports.File({
       filename: path.join('logs', 'error.log'),

@@ -22,8 +22,7 @@ const baseLayout = ({ preheader, headerColor, iconBg, icon, title, subtitle, bod
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td>
-                    <span style="font-size:22px;font-weight:800;color:#f59e0b;letter-spacing:-0.5px;">Quick Send</span>
-                    <span style="font-size:22px;font-weight:400;color:#ffffff;letter-spacing:-0.5px;"> Delivery</span>
+                    <span style="font-size:22px;font-weight:800;color:#f59e0b;letter-spacing:-0.5px;">Accessiblexpress</span>
                   </td>
                   <td align="right">
                     <span style="background-color:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;">Shipment Alert</span>
@@ -63,7 +62,7 @@ const baseLayout = ({ preheader, headerColor, iconBg, icon, title, subtitle, bod
           <tr>
             <td style="background-color:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 12px 12px;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 6px;color:#64748b;font-size:12px;">You're receiving this because a shipment is associated with your email address.</p>
-              <p style="margin:0;color:#94a3b8;font-size:11px;">© ${new Date().getFullYear()} Quick Send Delivery · All rights reserved</p>
+              <p style="margin:0;color:#94a3b8;font-size:11px;">© ${new Date().getFullYear()} Accessiblexpress · All rights reserved</p>
             </td>
           </tr>
 
@@ -224,7 +223,7 @@ exports.delivered = (shipment) => baseLayout({
       </td></tr>
     </table>
     <p style="margin:0;font-size:14px;color:#64748b;text-align:center;line-height:1.6;">
-      Thank you for choosing <strong style="color:#f59e0b;">Quick Send Delivery</strong>. We'd love to serve you again! 🙏
+      Thank you for choosing <strong style="color:#f59e0b;">Accessiblexpress</strong>. We'd love to serve you again! 🙏
     </p>`,
 });
 
@@ -260,12 +259,12 @@ exports.delayAlert = (shipment, event) => baseLayout({
 // ─── Template: Newsletter Welcome ────────────────────────────────────────────
 
 exports.newsletterWelcome = (email) => baseLayout({
-  preheader: `Welcome to Quick Send Delivery — you're now part of our community!`,
+  preheader: `Welcome to Accessiblexpress — you're now part of our community!`,
   headerColor: '#0f172a',
   iconBg: 'rgba(245,158,11,0.2)',
   icon: '🎉',
   title: 'Welcome Aboard!',
-  subtitle: "You're now part of the Quick Send Delivery family.",
+  subtitle: "You're now part of the Accessiblexpress family.",
   cta: 'Visit Our Website',
   body: `
     <p style="margin:0 0 20px;font-size:15px;color:#334155;line-height:1.6;">

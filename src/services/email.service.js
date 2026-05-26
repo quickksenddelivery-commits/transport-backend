@@ -13,7 +13,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: `Quick Send Delivery <${env.EMAIL_FROM}>`,
+      from: `Accessiblexpress <${env.EMAIL_FROM}>`,
       to,
       subject,
       html,
@@ -67,7 +67,7 @@ const sendEmailVerification = (user, verifyUrl) =>
   sendEmail({
     to: user.email,
     subject: 'Verify Your Email',
-    html: `<h2>Welcome to Quick Send Delivery, ${user.firstName}!</h2>
+    html: `<h2>Welcome to Accessiblexpress, ${user.firstName}!</h2>
            <p>Please verify your email address:</p>
            <a href="${verifyUrl}" style="background:#28a745;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px">Verify Email</a>`,
   });
@@ -122,7 +122,7 @@ const sendDelayAlert = (shipment, event) =>
 const sendNewsletterWelcome = (email) =>
   sendEmail({
     to: email,
-    subject: '🎉 Welcome to Quick Send Delivery!',
+    subject: '🎉 Welcome to Accessiblexpress!',
     html: templates.newsletterWelcome(email),
   });
 

@@ -31,10 +31,10 @@ exports.submit = asyncHandler(async (req, res, next) => {
   // Auto-reply to sender
   emailService.sendEmail({
     to: email,
-    subject: 'We received your message — Quick Send Delivery',
+    subject: 'We received your message — Accessiblexpress',
     html: `<p>Hi ${name},</p>
            <p>Thanks for reaching out. We've received your message and will get back to you within 1–2 business days.</p>
-           <p>— The Quick Send Team</p>`,
+           <p>— The Accessiblexpress Team</p>`,
   }).catch((err) => logger.warn(`Contact auto-reply failed: ${err.message}`));
 
   logger.info(`Contact form submitted by ${email}`);

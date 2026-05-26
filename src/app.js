@@ -35,7 +35,7 @@ app.use(requestLogger);
 app.use('/api', apiLimiter);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'transport-backend', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'accessiblexpress', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/auth', authRoutes);
