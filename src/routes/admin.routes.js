@@ -59,4 +59,18 @@ router.post(
   adminController.addEvent
 );
 
+router.patch(
+  '/shipments/:id/events/:eventId',
+  [param('id').isMongoId(), param('eventId').isMongoId()],
+  validate,
+  adminController.updateEvent
+);
+
+router.delete(
+  '/shipments/:id/events/:eventId',
+  [param('id').isMongoId(), param('eventId').isMongoId()],
+  validate,
+  adminController.deleteEvent
+);
+
 module.exports = router;
