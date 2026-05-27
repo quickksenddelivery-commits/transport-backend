@@ -1,279 +1,367 @@
 const PDFDocument = require('pdfkit');
 
-const BRAND = {
-  navy: '#0D0840',
-  red: '#CC1500',
-  gold: '#F5C100',
-  light: '#F8FAFC',
+const C = {
+  navy:   '#0D0840',
+  navyLt: '#1A1560',
+  amber:  '#F59E0B',
+  red:    '#DC2626',
+  green:  '#16A34A',
+  white:  '#FFFFFF',
+  light:  '#F8FAFC',
   border: '#E2E8F0',
-  text: '#1E293B',
-  muted: '#64748B',
+  text:   '#1E293B',
+  muted:  '#64748B',
+  row:    '#F1F5F9',
 };
 
+const PW = 595.28; // A4 width pt
+const PH = 841.89; // A4 height pt
+const ML = 45;     // margin left
+const MR = 45;     // margin right
+const CW = PW - ML - MR; // content width
+
+// ─── Core helpers ────────────────────────────────────────────────────────────
+
 function createDoc(res, filename) {
-  const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
+  const doc = new PDFDocument({ margin: 0, size: 'A4', bufferPages: true, autoFirstPage: true });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   doc.pipe(res);
   return doc;
 }
 
-function header(doc, title, subtitle) {
-  // Navy header bar
-  doc.rect(0, 0, doc.page.width, 80).fill(BRAND.navy);
+function drawHeader(doc, docTitle, docRef) {
+  // Navy gradient-style header band
+  doc.rect(0, 0, PW, 72).fill(C.navy);
+  doc.rect(0, 72, PW, 6).fill(C.amber);
 
-  // Company name
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(18)
-    .text('ACCESSIBLEXPRESS', 50, 22);
-  doc.fillColor(BRAND.gold).font('Helvetica').fontSize(9)
-    .text('Global Logistics & Freight', 50, 45);
+  // Brand name
+  doc.fillColor(C.white).font('Helvetica-Bold').fontSize(20)
+    .text('ACCESSIBLEXPRESS', ML, 18);
+  doc.fillColor(C.amber).font('Helvetica').fontSize(8)
+    .text('GLOBAL LOGISTICS & FREIGHT', ML, 42);
 
-  // Document title (right side)
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(14)
-    .text(title, 0, 22, { align: 'right', width: doc.page.width - 50 });
-  doc.fillColor(BRAND.gold).font('Helvetica').fontSize(9)
-    .text(subtitle, 0, 45, { align: 'right', width: doc.page.width - 50 });
+  // Document title (right-aligned)
+  doc.fillColor(C.white).font('Helvetica-Bold').fontSize(15)
+    .text(docTitle, 0, 18, { align: 'right', width: PW - MR });
+  doc.fillColor(C.amber).font('Helvetica').fontSize(8)
+    .text(docRef, 0, 42, { align: 'right', width: PW - MR });
 
-  doc.moveDown(4);
+  return 90; // y after header
 }
 
-function sectionTitle(doc, text) {
-  const y = doc.y;
-  doc.rect(50, y, doc.page.width - 100, 20).fill(BRAND.navy);
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(9)
-    .text(text.toUpperCase(), 58, y + 5.5);
-  doc.moveDown(0.3);
+function drawSectionBar(doc, y, title) {
+  doc.rect(ML, y, CW, 18).fill(C.navy);
+  doc.fillColor(C.white).font('Helvetica-Bold').fontSize(7.5)
+    .text(title.toUpperCase(), ML + 8, y + 5.5, { width: CW - 16 });
+  return y + 18;
 }
 
-function field(doc, label, value, x, y, width) {
-  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5)
-    .text(label.toUpperCase(), x, y);
-  doc.fillColor(BRAND.text).font('Helvetica-Bold').fontSize(9.5)
-    .text(value || '—', x, y + 10, { width: width - 4 });
+function drawField(doc, x, y, w, label, value) {
+  doc.fillColor(C.muted).font('Helvetica').fontSize(6.5)
+    .text(label.toUpperCase(), x, y, { width: w });
+  doc.fillColor(C.text).font('Helvetica-Bold').fontSize(9)
+    .text(value || '—', x, y + 9, { width: w });
 }
 
-function twoColParty(doc, leftTitle, leftParty, rightTitle, rightParty, startY) {
-  const mid = doc.page.width / 2;
-  const colW = mid - 68;
-
-  sectionTitle(doc, `${leftTitle}  /  ${rightTitle}`);
-  const y = doc.y + 6;
-
-  field(doc, 'Name', leftParty.name, 58, y, colW);
-  field(doc, 'Name', rightParty.name, mid + 8, y, colW);
-
-  const addr = (p) => [p.street, p.city, p.state, p.postalCode].filter(Boolean).join(', ');
-  field(doc, 'Address', addr(leftParty), 58, y + 30, colW);
-  field(doc, 'Address', addr(rightParty), mid + 8, y + 30, colW);
-
-  field(doc, 'Country', leftParty.country, 58, y + 60, colW / 2);
-  field(doc, 'Country', rightParty.country, mid + 8, y + 60, colW / 2);
-
-  field(doc, 'Phone', leftParty.phone, 58 + colW / 2, y + 60, colW / 2);
-  field(doc, 'Phone', rightParty.phone, mid + 8 + colW / 2, y + 60, colW / 2);
-
-  field(doc, 'Email', leftParty.email, 58, y + 90, colW);
-  field(doc, 'Email', rightParty.email, mid + 8, y + 90, colW);
-
-  doc.moveTo(mid, y - 4).lineTo(mid, y + 114).strokeColor(BRAND.border).lineWidth(0.5).stroke();
-  doc.moveDown(9);
+function drawDivider(doc, y) {
+  doc.moveTo(ML, y).lineTo(PW - MR, y).strokeColor(C.border).lineWidth(0.5).stroke();
+  return y + 1;
 }
 
-function footer(doc, trackingNumber) {
-  const pageCount = doc.bufferedPageRange().count;
-  for (let i = 0; i < pageCount; i++) {
+function drawFooters(doc, trackingNumber) {
+  const count = doc.bufferedPageRange().count;
+  for (let i = 0; i < count; i++) {
     doc.switchToPage(i);
-    const y = doc.page.height - 38;
-    doc.rect(0, y, doc.page.width, 38).fill(BRAND.light);
-    doc.moveTo(0, y).lineTo(doc.page.width, y).strokeColor(BRAND.border).lineWidth(0.5).stroke();
-    doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5)
-      .text(`Tracking: ${trackingNumber}  •  Generated ${new Date().toUTCString()}  •  accessiblexpress.com`, 50, y + 12);
-    doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5)
-      .text(`Page ${i + 1} of ${pageCount}`, 0, y + 12, { align: 'right', width: doc.page.width - 50 });
+    const fy = PH - 30;
+    doc.rect(0, fy, PW, 30).fill(C.light);
+    doc.moveTo(0, fy).lineTo(PW, fy).strokeColor(C.border).lineWidth(0.5).stroke();
+    doc.fillColor(C.muted).font('Helvetica').fontSize(7)
+      .text(
+        `${trackingNumber}  •  Generated ${new Date().toUTCString()}  •  accessiblexpress.com`,
+        ML, fy + 10
+      );
+    doc.fillColor(C.muted).font('Helvetica').fontSize(7)
+      .text(`Page ${i + 1} of ${count}`, 0, fy + 10, { align: 'right', width: PW - MR });
   }
 }
 
-// ─── Air Waybill ────────────────────────────────────────────────────────────
+// ─── Party block (sender + recipient side by side) ───────────────────────────
+
+function drawParties(doc, y, leftLabel, left, rightLabel, right) {
+  const mid = ML + CW / 2;
+  const colW = CW / 2 - 12;
+
+  y = drawSectionBar(doc, y, `${leftLabel}  /  ${rightLabel}`);
+  y += 8;
+
+  const addr = (p) => [p.street, p.city, p.state, p.postalCode].filter(Boolean).join(', ');
+
+  // Left column
+  drawField(doc, ML + 8, y,      colW, 'Full Name',  left.name);
+  drawField(doc, ML + 8, y + 30, colW, 'Address',    addr(left));
+  drawField(doc, ML + 8, y + 60, colW / 2 - 4, 'Country', left.country);
+  drawField(doc, ML + 8 + colW / 2, y + 60, colW / 2 - 4, 'Phone', left.phone);
+  drawField(doc, ML + 8, y + 85, colW, 'Email', left.email);
+
+  // Vertical divider
+  doc.moveTo(mid, y - 4).lineTo(mid, y + 108)
+    .strokeColor(C.border).lineWidth(0.5).stroke();
+
+  // Right column
+  drawField(doc, mid + 8, y,      colW, 'Full Name',  right.name);
+  drawField(doc, mid + 8, y + 30, colW, 'Address',    addr(right));
+  drawField(doc, mid + 8, y + 60, colW / 2 - 4, 'Country', right.country);
+  drawField(doc, mid + 8 + colW / 2, y + 60, colW / 2 - 4, 'Phone', right.phone);
+  drawField(doc, mid + 8, y + 85, colW, 'Email', right.email);
+
+  // Bottom border
+  const endY = y + 108;
+  doc.rect(ML, y - 4, CW, endY - y + 8).strokeColor(C.border).lineWidth(0.5).stroke();
+
+  return endY + 12;
+}
+
+// ─── AIR WAYBILL ─────────────────────────────────────────────────────────────
+
 exports.generateAWB = function (shipment, res) {
   const doc = createDoc(res, `AWB-${shipment.trackingNumber}.pdf`);
-  header(doc, 'AIR WAYBILL', 'NON-NEGOTIABLE');
+  let y = drawHeader(doc, 'AIR WAYBILL', 'NON-NEGOTIABLE COPY');
 
-  // AWB number box
-  doc.rect(50, doc.y, doc.page.width - 100, 34).fill(BRAND.light).stroke(BRAND.border);
-  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5).text('AWB NUMBER', 60, doc.y + 4);
-  doc.fillColor(BRAND.navy).font('Helvetica-Bold').fontSize(16).text(shipment.trackingNumber, 60, doc.y + 14);
-  doc.moveDown(3.2);
+  // ── AWB number hero block ──
+  doc.rect(ML, y, CW, 46).fill(C.light).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.rect(ML, y, 4, 46).fill(C.amber);
+  doc.fillColor(C.muted).font('Helvetica').fontSize(7)
+    .text('AIR WAYBILL NUMBER', ML + 14, y + 8);
+  doc.fillColor(C.navy).font('Helvetica-Bold').fontSize(22)
+    .text(shipment.trackingNumber, ML + 14, y + 18);
 
-  twoColParty(doc, 'Shipper', shipment.sender, 'Consignee', shipment.recipient);
+  // Status badge
+  const statusLabel = (shipment.status || 'pending').replace(/_/g, ' ').toUpperCase();
+  doc.rect(PW - MR - 90, y + 12, 82, 22).fill(C.navy);
+  doc.fillColor(C.amber).font('Helvetica-Bold').fontSize(8)
+    .text(statusLabel, PW - MR - 86, y + 18, { width: 74, align: 'center' });
 
-  sectionTitle(doc, 'Shipment Details');
-  const sy = doc.y + 6;
-  const cw = (doc.page.width - 100) / 4;
-  field(doc, 'Service', shipment.service?.replace(/_/g, ' ').toUpperCase(), 58, sy, cw);
-  field(doc, 'Weight (kg)', String(shipment.weight), 58 + cw, sy, cw);
-  field(doc, 'Dimensions (cm)', shipment.dimensions
-    ? `${shipment.dimensions.length || '—'} × ${shipment.dimensions.width || '—'} × ${shipment.dimensions.height || '—'}`
-    : '—', 58 + cw * 2, sy, cw);
-  field(doc, 'Declared Value (USD)', shipment.declaredValue ? `$${shipment.declaredValue.toFixed(2)}` : '—', 58 + cw * 3, sy, cw);
-  doc.moveDown(4.5);
+  y += 58;
 
-  field(doc, 'Contents / Description of Goods', shipment.contents || 'General Cargo', 58, doc.y, doc.page.width - 120);
-  doc.moveDown(3.5);
+  // ── Parties ──
+  y = drawParties(doc, y, 'Shipper', shipment.sender, 'Consignee', shipment.recipient);
 
-  sectionTitle(doc, 'Routing & Dates');
-  const ry = doc.y + 6;
-  const hw = (doc.page.width - 100) / 3;
-  field(doc, 'Origin', `${shipment.sender.city || ''}, ${shipment.sender.country || ''}`, 58, ry, hw);
-  field(doc, 'Destination', `${shipment.recipient.city || ''}, ${shipment.recipient.country || ''}`, 58 + hw, ry, hw);
-  field(doc, 'ETA', shipment.eta ? new Date(shipment.eta).toDateString() : 'TBD', 58 + hw * 2, ry, hw);
-  doc.moveDown(4.5);
+  // ── Shipment details ──
+  y = drawSectionBar(doc, y, 'Shipment Details');
+  y += 8;
+  const qw = CW / 4 - 4;
+  drawField(doc, ML + 8,           y, qw, 'Service Type',     (shipment.service || '').replace(/_/g, ' ').toUpperCase());
+  drawField(doc, ML + 8 + qw + 8,  y, qw, 'Gross Weight (kg)', String(shipment.weight));
+  const dims = shipment.dimensions
+    ? `${shipment.dimensions.length||'—'} × ${shipment.dimensions.width||'—'} × ${shipment.dimensions.height||'—'}`
+    : '—';
+  drawField(doc, ML + 8 + (qw + 8) * 2, y, qw, 'Dimensions (cm)', dims);
+  drawField(doc, ML + 8 + (qw + 8) * 3, y, qw, 'Declared Value',
+    shipment.declaredValue ? `$${Number(shipment.declaredValue).toFixed(2)}` : '—');
+  doc.rect(ML, y - 4, CW, 38).strokeColor(C.border).lineWidth(0.5).stroke();
+  y += 42;
 
-  field(doc, 'Issue Date', new Date(shipment.createdAt).toDateString(), 58, doc.y, 200);
-  field(doc, 'Status', shipment.status?.replace(/_/g, ' ').toUpperCase(), 260, doc.y, 200);
-  doc.moveDown(5);
+  // Contents
+  y = drawSectionBar(doc, y, 'Description of Contents');
+  y += 8;
+  doc.fillColor(C.text).font('Helvetica').fontSize(9)
+    .text(shipment.contents || 'General Cargo', ML + 8, y, { width: CW - 16 });
+  doc.rect(ML, y - 4, CW, 28).strokeColor(C.border).lineWidth(0.5).stroke();
+  y += 32;
 
-  // Signature box
-  sectionTitle(doc, 'Shipper Signature');
-  doc.rect(50, doc.y + 6, doc.page.width - 100, 55).fill('white').stroke(BRAND.border);
-  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5)
-    .text('By tendering this shipment, shipper agrees to the terms and conditions of Accessiblexpress carriage.', 58, doc.y + 14, { width: doc.page.width - 130 });
-  doc.fillColor(BRAND.muted).fontSize(7).text('Signature', 58, doc.y + 40);
+  // ── Routing ──
+  y = drawSectionBar(doc, y, 'Routing & Schedule');
+  y += 8;
+  const tw = CW / 3 - 6;
+  drawField(doc, ML + 8,            y, tw, 'Origin',      `${shipment.sender.city||''}, ${shipment.sender.country||''}`);
+  drawField(doc, ML + 8 + tw + 10,  y, tw, 'Destination', `${shipment.recipient.city||''}, ${shipment.recipient.country||''}`);
+  drawField(doc, ML + 8 + (tw+10)*2, y, tw, 'Est. Delivery', shipment.eta ? new Date(shipment.eta).toDateString() : 'TBD');
+  doc.rect(ML, y - 4, CW, 38).strokeColor(C.border).lineWidth(0.5).stroke();
+  y += 46;
 
-  footer(doc, shipment.trackingNumber);
+  drawField(doc, ML + 8, y, tw, 'Issue Date',    new Date(shipment.createdAt).toDateString());
+  drawField(doc, ML + 8 + tw + 10, y, tw, 'Service Class', (shipment.service||'').replace(/_/g,' ').toUpperCase());
+  y += 28;
+
+  // ── Signature ──
+  y = drawSectionBar(doc, y, 'Shipper Certification & Signature');
+  y += 6;
+  doc.rect(ML, y, CW, 52).fill(C.light).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.muted).font('Helvetica').fontSize(7.5)
+    .text(
+      'I hereby certify that the particulars on the face hereof are correct and that insofar as any part of the consignment contains dangerous goods, such part is properly described by name and is in proper condition for carriage by air according to applicable regulations.',
+      ML + 10, y + 8, { width: CW - 20 }
+    );
+  doc.fillColor(C.muted).font('Helvetica').fontSize(7)
+    .text('Signature & Date', ML + 10, y + 40);
+  y += 60;
+
+  drawFooters(doc, shipment.trackingNumber);
   doc.end();
 };
 
-// ─── Commercial Invoice ──────────────────────────────────────────────────────
+// ─── COMMERCIAL INVOICE ───────────────────────────────────────────────────────
+
 exports.generateInvoice = function (shipment, res) {
   const doc = createDoc(res, `Invoice-${shipment.trackingNumber}.pdf`);
-  header(doc, 'COMMERCIAL INVOICE', `INV-${shipment.trackingNumber}`);
+  let y = drawHeader(doc, 'COMMERCIAL INVOICE', `INV-${shipment.trackingNumber}`);
 
-  // Invoice meta row
-  doc.rect(50, doc.y, doc.page.width - 100, 34).fill(BRAND.light).stroke(BRAND.border);
-  const mw = (doc.page.width - 100) / 3;
-  field(doc, 'Invoice Number', `INV-${shipment.trackingNumber}`, 60, doc.y + 4, mw);
-  field(doc, 'Invoice Date', new Date(shipment.createdAt).toDateString(), 60 + mw, doc.y + 4, mw);
-  field(doc, 'Currency', 'USD', 60 + mw * 2, doc.y + 4, mw);
-  doc.moveDown(3.2);
+  // ── Invoice meta ──
+  doc.rect(ML, y, CW, 46).fill(C.light).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.rect(ML, y, 4, 46).fill(C.amber);
+  const mw = CW / 3 - 6;
+  drawField(doc, ML + 14,           y + 8, mw, 'Invoice Number', `INV-${shipment.trackingNumber}`);
+  drawField(doc, ML + 14 + mw + 10, y + 8, mw, 'Invoice Date',   new Date(shipment.createdAt).toDateString());
+  drawField(doc, ML + 14 + (mw+10)*2, y + 8, mw, 'Currency',     'USD');
+  y += 58;
 
-  twoColParty(doc, 'Exporter / Seller', shipment.sender, 'Importer / Buyer', shipment.recipient);
+  // ── Parties ──
+  y = drawParties(doc, y, 'Exporter / Seller', shipment.sender, 'Importer / Buyer', shipment.recipient);
 
-  sectionTitle(doc, 'Line Items');
-  // Table header
-  const th = doc.y + 6;
-  doc.rect(50, th, doc.page.width - 100, 18).fill(BRAND.navy);
-  const cols = [58, 240, 330, 410, 480];
-  const headers = ['Description of Goods', 'HS Code', 'Qty', 'Unit Value', 'Total'];
-  headers.forEach((h, i) => {
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(7.5).text(h, cols[i], th + 5);
+  // ── Line items table ──
+  y = drawSectionBar(doc, y, 'Line Items');
+  y += 2;
+
+  // Table header row
+  const cols = [ML + 8, ML + 210, ML + 310, ML + 390, ML + 465];
+  const hdrs = ['Description of Goods', 'HS Code', 'Qty', 'Unit Value (USD)', 'Total (USD)'];
+  doc.rect(ML, y, CW, 20).fill(C.navyLt);
+  hdrs.forEach((h, i) => {
+    doc.fillColor(C.white).font('Helvetica-Bold').fontSize(7.5)
+      .text(h, cols[i], y + 6, { width: i < hdrs.length - 1 ? cols[i+1] - cols[i] - 4 : 60 });
   });
+  y += 20;
 
-  // Single line item
-  const tr = th + 24;
-  doc.rect(50, tr, doc.page.width - 100, 20).fill('white').stroke(BRAND.border);
+  // Data row
   const unitVal = shipment.declaredValue || 0;
-  doc.fillColor(BRAND.text).font('Helvetica').fontSize(8.5)
-    .text(shipment.contents || 'General Cargo', cols[0], tr + 5, { width: 175 });
-  doc.text('—', cols[1], tr + 5);
-  doc.text('1', cols[2], tr + 5);
-  doc.text(`$${unitVal.toFixed(2)}`, cols[3], tr + 5);
-  doc.text(`$${unitVal.toFixed(2)}`, cols[4], tr + 5);
+  doc.rect(ML, y, CW, 24).fill(C.white).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.text).font('Helvetica').fontSize(8.5)
+    .text(shipment.contents || 'General Cargo', cols[0], y + 7, { width: 196 });
+  doc.text('—',                       cols[1], y + 7);
+  doc.text('1',                        cols[2], y + 7);
+  doc.text(`$${unitVal.toFixed(2)}`,   cols[3], y + 7);
+  doc.text(`$${unitVal.toFixed(2)}`,   cols[4], y + 7);
+  y += 24;
 
   // Total row
-  const tot = tr + 26;
-  doc.rect(50, tot, doc.page.width - 100, 22).fill(BRAND.light).stroke(BRAND.border);
-  doc.fillColor(BRAND.navy).font('Helvetica-Bold').fontSize(9)
-    .text('TOTAL DECLARED VALUE', cols[0], tot + 6);
-  doc.fillColor(BRAND.red).font('Helvetica-Bold').fontSize(11)
-    .text(`USD $${unitVal.toFixed(2)}`, cols[4] - 20, tot + 5);
-  doc.moveDown(8);
+  doc.rect(ML, y, CW, 28).fill(C.navy).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.amber).font('Helvetica-Bold').fontSize(9)
+    .text('TOTAL DECLARED VALUE', cols[0], y + 9);
+  doc.fillColor(C.white).font('Helvetica-Bold').fontSize(13)
+    .text(`USD $${unitVal.toFixed(2)}`, 0, y + 7, { align: 'right', width: PW - MR - 8 });
+  y += 36;
 
-  sectionTitle(doc, 'Shipment & Customs Information');
-  const cy = doc.y + 6;
-  const cw = (doc.page.width - 100) / 3;
-  field(doc, 'Country of Origin', shipment.sender.country || '—', 58, cy, cw);
-  field(doc, 'Country of Destination', shipment.recipient.country || '—', 58 + cw, cy, cw);
-  field(doc, 'Incoterms', 'DAP', 58 + cw * 2, cy, cw);
-  doc.moveDown(4.5);
-  field(doc, 'Weight (kg)', String(shipment.weight), 58, doc.y, cw);
-  field(doc, 'Service', shipment.service?.replace(/_/g, ' ').toUpperCase(), 58 + cw, doc.y, cw);
-  field(doc, 'Tracking Number', shipment.trackingNumber, 58 + cw * 2, doc.y, cw);
-  doc.moveDown(5);
+  // ── Customs info ──
+  y = drawSectionBar(doc, y, 'Shipment & Customs Information');
+  y += 8;
+  const cw3 = CW / 3 - 6;
+  drawField(doc, ML + 8,              y, cw3, 'Country of Origin',      shipment.sender.country    || '—');
+  drawField(doc, ML + 8 + cw3 + 10,  y, cw3, 'Country of Destination', shipment.recipient.country || '—');
+  drawField(doc, ML + 8 + (cw3+10)*2, y, cw3, 'Incoterms',             'DAP');
+  doc.rect(ML, y - 4, CW, 38).strokeColor(C.border).lineWidth(0.5).stroke();
+  y += 46;
 
-  sectionTitle(doc, 'Declaration');
-  doc.rect(50, doc.y + 6, doc.page.width - 100, 48).fill('white').stroke(BRAND.border);
-  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(7.5)
-    .text('I declare that the information on this invoice is true and correct and that the contents and value of this shipment are as stated above.', 58, doc.y + 14, { width: doc.page.width - 130 });
-  doc.fillColor(BRAND.muted).fontSize(7).text('Authorised Signature', 58, doc.y + 38);
+  drawField(doc, ML + 8,              y, cw3, 'Gross Weight (kg)',  String(shipment.weight));
+  drawField(doc, ML + 8 + cw3 + 10,  y, cw3, 'Service',            (shipment.service||'').replace(/_/g,' ').toUpperCase());
+  drawField(doc, ML + 8 + (cw3+10)*2, y, cw3, 'Tracking Number',   shipment.trackingNumber);
+  y += 28;
 
-  footer(doc, shipment.trackingNumber);
+  // ── Declaration ──
+  y = drawSectionBar(doc, y, 'Declaration');
+  y += 6;
+  doc.rect(ML, y, CW, 52).fill(C.light).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.muted).font('Helvetica').fontSize(7.5)
+    .text(
+      'I declare that the information on this invoice is true and correct and that the contents and value of this shipment are as stated above. This shipment does not contain any undeclared dangerous or prohibited items.',
+      ML + 10, y + 8, { width: CW - 20 }
+    );
+  doc.fillColor(C.muted).font('Helvetica').fontSize(7)
+    .text('Authorised Signature & Company Stamp', ML + 10, y + 38);
+  y += 60;
+
+  drawFooters(doc, shipment.trackingNumber);
   doc.end();
 };
 
-// ─── Packing List ────────────────────────────────────────────────────────────
+// ─── PACKING LIST ─────────────────────────────────────────────────────────────
+
 exports.generatePackingList = function (shipment, res) {
   const doc = createDoc(res, `PackingList-${shipment.trackingNumber}.pdf`);
-  header(doc, 'PACKING LIST', `PKL-${shipment.trackingNumber}`);
+  let y = drawHeader(doc, 'PACKING LIST', `PKL-${shipment.trackingNumber}`);
 
-  // Reference box
-  doc.rect(50, doc.y, doc.page.width - 100, 34).fill(BRAND.light).stroke(BRAND.border);
-  const mw = (doc.page.width - 100) / 3;
-  field(doc, 'Packing List Ref.', `PKL-${shipment.trackingNumber}`, 60, doc.y + 4, mw);
-  field(doc, 'Date Prepared', new Date(shipment.createdAt).toDateString(), 60 + mw, doc.y + 4, mw);
-  field(doc, 'Status', shipment.status?.replace(/_/g, ' ').toUpperCase(), 60 + mw * 2, doc.y + 4, mw);
-  doc.moveDown(3.2);
+  // ── Reference meta ──
+  doc.rect(ML, y, CW, 46).fill(C.light).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.rect(ML, y, 4, 46).fill(C.amber);
+  const mw = CW / 3 - 6;
+  drawField(doc, ML + 14,             y + 8, mw, 'Packing List Ref.',  `PKL-${shipment.trackingNumber}`);
+  drawField(doc, ML + 14 + mw + 10,  y + 8, mw, 'Date Prepared',      new Date(shipment.createdAt).toDateString());
+  drawField(doc, ML + 14 + (mw+10)*2, y + 8, mw, 'Status',
+    (shipment.status||'').replace(/_/g,' ').toUpperCase());
+  y += 58;
 
-  twoColParty(doc, 'Shipped From', shipment.sender, 'Ship To', shipment.recipient);
+  // ── Parties ──
+  y = drawParties(doc, y, 'Shipped From', shipment.sender, 'Ship To', shipment.recipient);
 
-  sectionTitle(doc, 'Package Contents');
-  // Table header
-  const th = doc.y + 6;
-  doc.rect(50, th, doc.page.width - 100, 18).fill(BRAND.navy);
-  const cols  = [58, 180, 280, 360, 430, 490];
-  const hdrs  = ['Description', 'Contents', 'Qty', 'Weight (kg)', 'L × W × H (cm)', 'Condition'];
-  hdrs.forEach((h, i) => {
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(7.5).text(h, cols[i], th + 5);
+  // ── Package contents table ──
+  y = drawSectionBar(doc, y, 'Package Contents');
+  y += 2;
+
+  const pcols = [ML + 8, ML + 155, ML + 265, ML + 340, ML + 415, ML + 490];
+  const phdrs = ['Description', 'Contents', 'Qty', 'Weight (kg)', 'L × W × H (cm)', 'Condition'];
+  doc.rect(ML, y, CW, 20).fill(C.navyLt);
+  phdrs.forEach((h, i) => {
+    doc.fillColor(C.white).font('Helvetica-Bold').fontSize(7.5)
+      .text(h, pcols[i], y + 6, { width: i < phdrs.length - 1 ? pcols[i+1] - pcols[i] - 4 : 55 });
   });
+  y += 20;
 
-  // Package row
-  const tr = th + 24;
-  doc.rect(50, tr, doc.page.width - 100, 22).fill('white').stroke(BRAND.border);
   const dims = shipment.dimensions
-    ? `${shipment.dimensions.length || '—'} × ${shipment.dimensions.width || '—'} × ${shipment.dimensions.height || '—'}`
+    ? `${shipment.dimensions.length||'—'} × ${shipment.dimensions.width||'—'} × ${shipment.dimensions.height||'—'}`
     : '—';
-  doc.fillColor(BRAND.text).font('Helvetica').fontSize(8)
-    .text('Package 1', cols[0], tr + 6)
-    .text(shipment.contents || 'General Cargo', cols[1], tr + 6, { width: 95 })
-    .text('1', cols[2], tr + 6)
-    .text(String(shipment.weight), cols[3], tr + 6)
-    .text(dims, cols[4], tr + 6)
-    .text('Good', cols[5], tr + 6);
+
+  // Data row (alternating bg)
+  doc.rect(ML, y, CW, 26).fill(C.row).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.text).font('Helvetica').fontSize(8.5)
+    .text('Package 1',                   pcols[0], y + 8)
+    .text(shipment.contents || 'General Cargo', pcols[1], y + 8, { width: 105 })
+    .text('1',                            pcols[2], y + 8)
+    .text(String(shipment.weight),        pcols[3], y + 8)
+    .text(dims,                           pcols[4], y + 8)
+    .text('Good',                         pcols[5], y + 8);
+  y += 26;
 
   // Summary row
-  const sr = tr + 28;
-  doc.rect(50, sr, doc.page.width - 100, 22).fill(BRAND.light).stroke(BRAND.border);
-  doc.fillColor(BRAND.navy).font('Helvetica-Bold').fontSize(9)
-    .text('TOTALS', cols[0], sr + 6);
-  doc.fillColor(BRAND.navy).font('Helvetica-Bold').fontSize(9)
-    .text('1 pkg', cols[2], sr + 6)
-    .text(`${shipment.weight} kg`, cols[3], sr + 6);
-  doc.moveDown(9);
+  doc.rect(ML, y, CW, 26).fill(C.navy).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.amber).font('Helvetica-Bold').fontSize(8.5)
+    .text('TOTALS', pcols[0], y + 8);
+  doc.fillColor(C.white).font('Helvetica-Bold').fontSize(8.5)
+    .text('1 pkg',              pcols[2], y + 8)
+    .text(`${shipment.weight} kg`, pcols[3], y + 8);
+  y += 34;
 
-  sectionTitle(doc, 'Special Instructions & Notes');
-  doc.rect(50, doc.y + 6, doc.page.width - 100, 40).fill('white').stroke(BRAND.border);
-  doc.fillColor(BRAND.muted).font('Helvetica').fontSize(8.5)
-    .text(shipment.notes || 'No special instructions.', 58, doc.y + 16, { width: doc.page.width - 130 });
-  doc.moveDown(5.5);
+  // ── Notes ──
+  y = drawSectionBar(doc, y, 'Special Instructions & Notes');
+  y += 6;
+  const noteText = shipment.notes || 'No special instructions.';
+  const noteLines = doc.heightOfString(noteText, { width: CW - 20, font: 'Helvetica', fontSize: 8.5 });
+  const noteBoxH  = Math.max(40, noteLines + 20);
+  doc.rect(ML, y, CW, noteBoxH).fill(C.light).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.fillColor(C.text).font('Helvetica').fontSize(8.5)
+    .text(noteText, ML + 10, y + 10, { width: CW - 20 });
+  y += noteBoxH + 10;
 
-  sectionTitle(doc, 'Prepared By');
-  const py = doc.y + 6;
-  const pw = (doc.page.width - 100) / 2;
-  field(doc, 'Company', 'Accessiblexpress Ltd.', 58, py, pw);
-  field(doc, 'Website', 'accessiblexpress.com', 58 + pw, py, pw);
-  doc.moveDown(3.5);
-  field(doc, 'Email', 'logistics@accessiblexpress.com', 58, doc.y, pw);
-  field(doc, 'Phone', '+1 (800) AXP-SHIP', 58 + pw, doc.y, pw);
+  // ── Prepared by ──
+  y = drawSectionBar(doc, y, 'Prepared By — Accessiblexpress');
+  y += 8;
+  const hw = CW / 2 - 6;
+  drawField(doc, ML + 8,          y, hw, 'Company',  'Accessiblexpress Ltd.');
+  drawField(doc, ML + 8 + hw + 10, y, hw, 'Website', 'accessiblexpress.com');
+  y += 28;
+  drawField(doc, ML + 8,          y, hw, 'Email',    'logistics@accessiblexpress.com');
+  drawField(doc, ML + 8 + hw + 10, y, hw, 'Phone',   '+1 (800) AXP-SHIP');
+  y += 8;
 
-  footer(doc, shipment.trackingNumber);
+  drawFooters(doc, shipment.trackingNumber);
   doc.end();
 };
