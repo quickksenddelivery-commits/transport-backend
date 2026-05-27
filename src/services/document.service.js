@@ -30,6 +30,18 @@ function createDoc(res, filename) {
   return doc;
 }
 
+// Returns a Buffer — used for email attachments
+function generateToBuffer(drawFn) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 0, size: 'A4', bufferPages: true, autoFirstPage: true });
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    drawFn(doc);
+  });
+}
+
 function drawHeader(doc, docTitle, docRef) {
   // Navy gradient-style header band
   doc.rect(0, 0, PW, 72).fill(C.navy);
@@ -124,8 +136,7 @@ function drawParties(doc, y, leftLabel, left, rightLabel, right) {
 
 // ─── AIR WAYBILL ─────────────────────────────────────────────────────────────
 
-exports.generateAWB = function (shipment, res) {
-  const doc = createDoc(res, `AWB-${shipment.trackingNumber}.pdf`);
+function drawAWB(doc, shipment) {
   let y = drawHeader(doc, 'AIR WAYBILL', 'NON-NEGOTIABLE COPY');
 
   // ── AWB number hero block ──
@@ -199,12 +210,16 @@ exports.generateAWB = function (shipment, res) {
 
   drawFooters(doc, shipment.trackingNumber);
   doc.end();
+}
+
+exports.generateAWB = function (shipment, res) {
+  const doc = createDoc(res, `AWB-${shipment.trackingNumber}.pdf`);
+  drawAWB(doc, shipment);
 };
 
 // ─── COMMERCIAL INVOICE ───────────────────────────────────────────────────────
 
-exports.generateInvoice = function (shipment, res) {
-  const doc = createDoc(res, `Invoice-${shipment.trackingNumber}.pdf`);
+function drawInvoice(doc, shipment) {
   let y = drawHeader(doc, 'COMMERCIAL INVOICE', `INV-${shipment.trackingNumber}`);
 
   // ── Invoice meta ──
@@ -282,12 +297,16 @@ exports.generateInvoice = function (shipment, res) {
 
   drawFooters(doc, shipment.trackingNumber);
   doc.end();
+}
+
+exports.generateInvoice = function (shipment, res) {
+  const doc = createDoc(res, `Invoice-${shipment.trackingNumber}.pdf`);
+  drawInvoice(doc, shipment);
 };
 
 // ─── PACKING LIST ─────────────────────────────────────────────────────────────
 
-exports.generatePackingList = function (shipment, res) {
-  const doc = createDoc(res, `PackingList-${shipment.trackingNumber}.pdf`);
+function drawPackingList(doc, shipment) {
   let y = drawHeader(doc, 'PACKING LIST', `PKL-${shipment.trackingNumber}`);
 
   // ── Reference meta ──
@@ -364,4 +383,20 @@ exports.generatePackingList = function (shipment, res) {
 
   drawFooters(doc, shipment.trackingNumber);
   doc.end();
+}
+
+exports.generatePackingList = function (shipment, res) {
+  const doc = createDoc(res, `PackingList-${shipment.trackingNumber}.pdf`);
+  drawPackingList(doc, shipment);
+};
+
+// ─── Generate all 3 docs as Buffers (for email attachments) ──────────────────
+
+exports.generateAllToBuffers = async function (shipment) {
+  const [awb, invoice, packingList] = await Promise.all([
+    generateToBuffer((doc) => drawAWB(doc, shipment)),
+    generateToBuffer((doc) => drawInvoice(doc, shipment)),
+    generateToBuffer((doc) => drawPackingList(doc, shipment)),
+  ]);
+  return { awb, invoice, packingList };
 };

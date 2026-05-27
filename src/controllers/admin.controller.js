@@ -85,6 +85,14 @@ exports.createShipment = asyncHandler(async (req, res) => {
     trackingNumber: generateTrackingNumber(),
     ...req.body,
   });
+
+  // Send all shipping documents to recipient (non-blocking)
+  if (shipment.recipient?.email) {
+    emailService.sendShipmentDocuments(shipment.toObject()).catch((err) =>
+      logger.warn(`Shipment documents email failed: ${err.message}`)
+    );
+  }
+
   res.status(201).json({ status: 'success', data: { shipment } });
 });
 
