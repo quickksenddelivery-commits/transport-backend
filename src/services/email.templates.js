@@ -370,16 +370,15 @@ const docWrapper = (trackingNumber, recipientName, docType, docRef, accentColor,
 </body>
 </html>`;
 
-const partyRow = (label, p) => `
-  <td style="width:50%;padding:14px 16px;vertical-align:top;">
-    <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">${label}</p>
-    <p style="margin:0 0 3px;font-size:14px;font-weight:700;color:#fff;">${p.name || '—'}</p>
-    ${p.street ? `<p style="margin:0 0 2px;font-size:12px;color:rgba(255,255,255,0.8);">${p.street}</p>` : ''}
-    ${p.city || p.state ? `<p style="margin:0 0 2px;font-size:12px;color:rgba(255,255,255,0.8);">${[p.city, p.state].filter(Boolean).join(', ')}</p>` : ''}
-    ${p.country ? `<p style="margin:0 0 2px;font-size:12px;color:rgba(255,255,255,0.8);">${p.country}</p>` : ''}
-    ${p.email ? `<p style="margin:4px 0 2px;font-size:12px;color:rgba(255,255,255,0.75);">Email: <a href="mailto:${p.email}" style="color:#f59e0b;">${p.email}</a></p>` : ''}
-    ${p.phone ? `<p style="margin:0;font-size:12px;color:rgba(255,255,255,0.75);">Contact: ${p.phone}</p>` : ''}
-  </td>`;
+// Returns content only — the outer <td> is in each email template
+const partyContent = (label, p) => `
+  <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">${label}</p>
+  <p style="margin:0 0 3px;font-size:14px;font-weight:700;color:#fff;">${p.name || '—'}</p>
+  ${p.street ? `<p style="margin:0 0 2px;font-size:12px;color:rgba(255,255,255,0.8);">${p.street}</p>` : ''}
+  ${p.city || p.state ? `<p style="margin:0 0 2px;font-size:12px;color:rgba(255,255,255,0.8);">${[p.city, p.state].filter(Boolean).join(', ')}</p>` : ''}
+  ${p.country ? `<p style="margin:0 0 2px;font-size:12px;color:rgba(255,255,255,0.8);">${p.country}</p>` : ''}
+  ${p.email ? `<p style="margin:4px 0 2px;font-size:12px;color:rgba(255,255,255,0.75);">Email: <a href="mailto:${p.email}" style="color:#f59e0b;">${p.email}</a></p>` : ''}
+  ${p.phone ? `<p style="margin:0;font-size:12px;color:rgba(255,255,255,0.75);">Contact: ${p.phone}</p>` : ''}`;
 
 const detailRow = (label, value, highlight) => `
   <tr style="border-bottom:1px solid #e2e8f0;">
@@ -411,8 +410,8 @@ exports.awbEmail = (shipment) => {
     <tr><td style="padding:0;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="background:#1e3a5f;width:50%;padding:0;">${partyRow('Sender', shipment.sender)}</td>
-          <td style="background:#7f1d1d;width:50%;padding:0;">${partyRow('Recipient', shipment.recipient)}</td>
+          <td style="background:#1e3a5f;width:50%;padding:0;">${partyContent('Sender', shipment.sender)}</td>
+          <td style="background:#7f1d1d;width:50%;padding:0;">${partyContent('Recipient', shipment.recipient)}</td>
         </tr>
       </table>
     </td></tr>
@@ -454,15 +453,21 @@ exports.awbEmail = (shipment) => {
     ${trackingHero(shipment.trackingNumber, '#f59e0b')}
 
     <!-- Signature row -->
-    <tr><td style="background:#f8fafc;padding:20px 28px;border-top:1px solid #e2e8f0;">
+    <tr><td style="background:#f8fafc;padding:24px 28px;border-top:1px solid #e2e8f0;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:50%;text-align:center;border-right:1px solid #e2e8f0;">
-          <p style="margin:0 0 20px;font-size:12px;color:#64748b;font-weight:600;">Shipper Signature</p>
-          <div style="height:1px;background:#94a3b8;width:80%;margin:0 auto;"></div>
+        <td style="width:50%;text-align:center;padding-right:16px;border-right:1px solid #e2e8f0;">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Shipper Signature</p>
+          <p style="margin:0 0 6px;font-size:26px;color:#0f172a;font-family:Georgia,serif;font-style:italic;line-height:1;">${shipment.sender.name ? shipment.sender.name.split(' ').map((w,i)=> i===0 ? w : w[0]+'.').join(' ') : 'Authorized'}</p>
+          <div style="height:1px;background:#334155;width:75%;margin:6px auto 8px;"></div>
+          <p style="margin:0;font-size:11px;color:#94a3b8;">${shipment.sender.name || '—'}</p>
+          <p style="margin:2px 0 0;font-size:10px;color:#cbd5e1;">${new Date(shipment.createdAt).toDateString()}</p>
         </td>
-        <td style="width:50%;text-align:center;">
-          <p style="margin:0 0 20px;font-size:12px;color:#64748b;font-weight:600;">Carrier Signature</p>
-          <div style="height:1px;background:#94a3b8;width:80%;margin:0 auto;"></div>
+        <td style="width:50%;text-align:center;padding-left:16px;">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Carrier Signature</p>
+          <p style="margin:0 0 6px;font-size:26px;color:#0f172a;font-family:Georgia,serif;font-style:italic;line-height:1;">A. Express</p>
+          <div style="height:1px;background:#334155;width:75%;margin:6px auto 8px;"></div>
+          <p style="margin:0;font-size:11px;color:#94a3b8;">Accessiblexpress Ltd.</p>
+          <p style="margin:2px 0 0;font-size:10px;color:#cbd5e1;">${new Date(shipment.createdAt).toDateString()}</p>
         </td>
       </tr></table>
     </td></tr>`;
@@ -480,8 +485,8 @@ exports.invoiceEmail = (shipment) => {
     <tr><td style="padding:0;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="background:#14532d;width:50%;padding:0;">${partyRow('Exporter / Seller', shipment.sender)}</td>
-          <td style="background:#1e3a5f;width:50%;padding:0;">${partyRow('Importer / Buyer', shipment.recipient)}</td>
+          <td style="background:#14532d;width:50%;padding:0;">${partyContent('Exporter / Seller', shipment.sender)}</td>
+          <td style="background:#1e3a5f;width:50%;padding:0;">${partyContent('Importer / Buyer', shipment.recipient)}</td>
         </tr>
       </table>
     </td></tr>
@@ -551,8 +556,8 @@ exports.packingListEmail = (shipment) => {
     <tr><td style="padding:0;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="background:#4c1d95;width:50%;padding:0;">${partyRow('Shipped From', shipment.sender)}</td>
-          <td style="background:#1e3a5f;width:50%;padding:0;">${partyRow('Ship To', shipment.recipient)}</td>
+          <td style="background:#4c1d95;width:50%;padding:0;">${partyContent('Shipped From', shipment.sender)}</td>
+          <td style="background:#1e3a5f;width:50%;padding:0;">${partyContent('Ship To', shipment.recipient)}</td>
         </tr>
       </table>
     </td></tr>
