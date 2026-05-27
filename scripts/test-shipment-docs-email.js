@@ -8,7 +8,7 @@ mongoose.connect(process.env.MONGODB_URI).then(async () => {
   const shipment = await Shipment.findOne({ isDeleted: false }).lean();
 
   // Override recipient email to test address
-  shipment.recipient.email = 'kimseokwoopvtx@gmail.com';
+  shipment.recipient.email = 'quickksenddelivery@gmail.com';
 
   console.log('Sending documents for:', shipment.trackingNumber);
   console.log('Recipient:', shipment.recipient.email);
