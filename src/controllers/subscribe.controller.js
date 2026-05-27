@@ -33,7 +33,7 @@ exports.unsubscribe = asyncHandler(async (req, res, next) => {
   const subscriber = await Subscriber.findOneAndUpdate(
     { email },
     { isActive: false },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!subscriber) return next(new AppError('Email not found in our subscriber list', 404));

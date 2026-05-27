@@ -101,7 +101,7 @@ exports.updateShipment = asyncHandler(async (req, res, next) => {
   const shipment = await Shipment.findOneAndUpdate(
     { _id: req.params.id, isDeleted: false },
     req.body,
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!shipment) return next(new AppError('Shipment not found', 404));
@@ -123,7 +123,7 @@ exports.deleteShipment = asyncHandler(async (req, res, next) => {
   const shipment = await Shipment.findOneAndUpdate(
     { _id: req.params.id, isDeleted: false },
     { isDeleted: true },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!shipment) return next(new AppError('Shipment not found', 404));
@@ -139,7 +139,7 @@ exports.addEvent = asyncHandler(async (req, res, next) => {
   const shipment = await Shipment.findOneAndUpdate(
     { _id: req.params.id, isDeleted: false },
     { $push: { events: { time, date, location, desc, type } } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!shipment) return next(new AppError('Shipment not found', 404));
@@ -160,4 +160,43 @@ exports.addEvent = asyncHandler(async (req, res, next) => {
   }
 
   res.status(201).json({ status: 'success', data: { event: newEvent, shipment } });
+});
+
+// ─── Edit Tracking Event ──────────────────────────────────────────────────────
+
+exports.updateEvent = asyncHandler(async (req, res, next) => {
+  const { time, date, location, desc, type } = req.body;
+  const { id, eventId } = req.params;
+
+  const update = {};
+  if (desc !== undefined)     update['events.$.desc']     = desc;
+  if (location !== undefined) update['events.$.location'] = location;
+  if (date !== undefined)     update['events.$.date']     = date;
+  if (time !== undefined)     update['events.$.time']     = time;
+  if (type !== undefined)     update['events.$.type']     = type;
+
+  const shipment = await Shipment.findOneAndUpdate(
+    { _id: id, isDeleted: false, 'events._id': eventId },
+    { $set: update },
+    { returnDocument: 'after' }
+  );
+
+  if (!shipment) return next(new AppError('Shipment or event not found', 404));
+  const updated = shipment.events.find((e) => String(e._id) === eventId);
+  res.json({ status: 'success', data: { event: updated, shipment } });
+});
+
+// ─── Delete Tracking Event ────────────────────────────────────────────────────
+
+exports.deleteEvent = asyncHandler(async (req, res, next) => {
+  const { id, eventId } = req.params;
+
+  const shipment = await Shipment.findOneAndUpdate(
+    { _id: id, isDeleted: false },
+    { $pull: { events: { _id: eventId } } },
+    { returnDocument: 'after' }
+  );
+
+  if (!shipment) return next(new AppError('Shipment not found', 404));
+  res.json({ status: 'success', data: { shipment } });
 });
