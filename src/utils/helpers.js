@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 
 const generateTrackingNumber = () => {
-  const prefix = 'RCH';
+  const prefix = 'AXP';
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `${prefix}-${timestamp}-${random}`;
