@@ -5,6 +5,7 @@ const { generateAWB, generateInvoice, generatePackingList } = require('../servic
 const getShipment = async (trackingId) => {
   const shipment = await Shipment.findOne({
     trackingNumber: trackingId.toUpperCase(),
+    isDeleted: false,
   }).lean();
   return shipment;
 };
