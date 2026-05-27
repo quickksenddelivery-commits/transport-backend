@@ -16,6 +16,7 @@ const quoteRoutes = require('./routes/quote.routes');
 const contactRoutes = require('./routes/contact.routes');
 const adminRoutes = require('./routes/admin.routes');
 const subscribeRoutes = require('./routes/subscribe.routes');
+const documentRoutes = require('./routes/document.routes');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/quotes', quoteRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/subscribe', subscribeRoutes);
+app.use('/api/documents', documentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
