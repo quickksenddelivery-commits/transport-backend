@@ -14,7 +14,7 @@ mongoose.connect(process.env.MONGODB_URI).then(async () => {
   console.log('Recipient:', shipment.recipient.email);
 
   const result = await sendShipmentDocuments(shipment);
-  console.log('Success! Email ID:', result.id);
+  console.log('All 3 document emails sent successfully!');
 
   await mongoose.disconnect();
 }).catch((err) => {
